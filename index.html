@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+
+let ws, players = {};
+
+
+function join() {
+ws = new WebSocket('ws://localhost:8080');
+ws.onopen = () => {
+ws.send(JSON.stringify({
+type: 'join',
+name: name.value || 'Player',
+color: color.value
+}));
+menu.style.display = 'none';
+chat.style.display = 'flex';
+};
+
+
+ws.onmessage = e => {
+const msg = JSON.parse(e.data);
+if (msg.type === 'state') players = msg.players;
+if (msg.type === 'chat') console.log(msg.name + ': ' + msg.text);
+};
+}
+
+
+function sendChat() {
+ws.send(JSON.stringify({ type:'chat', text: msg.value }));
+msg.value = '';
+}
+
+
+const keys = {};
+addEventListener('keydown', e => keys[e.key]=true);
+addEventListener('keyup', e => keys[e.key]=false);
+
+
+function update() {
+if (!ws) return;
+let dx=0, dy=0;
+if (keys.w||keys.ArrowUp) dy-=4;
+if (keys.s||keys.ArrowDown) dy+=4;
+if (keys.a||keys.ArrowLeft) dx-=4;
+if (keys.d||keys.ArrowRight) dx+=4;
+if (dx||dy) ws.send(JSON.stringify({ type:'move', dx, dy }));
+}
+
+
+function draw() {
+ctx.clearRect(0,0,canvas.width,canvas.height);
+for (const id in players) {
+const p = players[id];
+ctx.fillStyle = p.color;
+ctx.beginPath();
+ctx.arc(p.x,p.y,15,0,Math.PI*2);
+ctx.fill();
+ctx.fillStyle='white';
+ctx.fillText(p.name, p.x-10, p.y-20);
+}
+}
+
+
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
